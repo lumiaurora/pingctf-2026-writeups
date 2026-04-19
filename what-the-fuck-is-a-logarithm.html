@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What the fuck is a logarithm | pingCTF 2026 Writeups</title>
+    <meta
+      name="description"
+      content="Writeup for the pingCTF 2026 rev challenge 'What the fuck is a logarithm'."
+    >
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(192, 132, 252, 0.16), transparent 30%),
+          radial-gradient(circle at top right, rgba(34, 211, 238, 0.14), transparent 28%),
+          linear-gradient(180deg, #090d18 0%, #05070f 100%);
+        color: #e5e7eb;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 56px 24px 80px;
+      }
+
+      a {
+        color: #7dd3fc;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 24px;
+        text-decoration: none;
+      }
+
+      .hero {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 22px;
+        padding: 28px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+      }
+
+      .eyebrow {
+        color: #67e8f9;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 6vw, 3.8rem);
+        margin: 12px 0 16px;
+        line-height: 1.05;
+      }
+
+      .meta {
+        color: #94a3b8;
+        font-size: 0.98rem;
+      }
+
+      .lead {
+        font-size: 1.12rem;
+        line-height: 1.7;
+        color: #cbd5e1;
+        max-width: 44rem;
+      }
+
+      article {
+        margin-top: 36px;
+      }
+
+      h2 {
+        margin-top: 32px;
+        margin-bottom: 12px;
+        font-size: 1.6rem;
+      }
+
+      p,
+      li {
+        color: #dbe4f0;
+        line-height: 1.75;
+        font-size: 1.02rem;
+      }
+
+      ul,
+      ol {
+        padding-left: 1.25rem;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: rgba(148, 163, 184, 0.12);
+        border-radius: 6px;
+        padding: 0.15em 0.4em;
+      }
+
+      pre {
+        overflow-x: auto;
+        padding: 18px;
+        border-radius: 16px;
+        background: #020617;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      .callout {
+        border-left: 4px solid #22d3ee;
+        padding: 16px 18px;
+        background: rgba(8, 47, 73, 0.32);
+        border-radius: 0 14px 14px 0;
+      }
+
+      .flag {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #bef264;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back-link" href="index.html">&larr; Back to all writeups</a>
+
+      <header class="hero">
+        <div class="eyebrow">Rev</div>
+        <h1>What the fuck is a logarithm</h1>
+        <p class="meta">50 points • Python reversing • Solved during pingCTF 2026</p>
+        <p class="lead">
+          This challenge ships a 4000-line generated Python verifier that looks
+          like a cursed symbolic math VM. The actual logic is much smaller: the
+          flag is split into four 8-character chunks and each chunk is checked as
+          a weighted sum in base <code>73.21</code>.
+        </p>
+      </header>
+
+      <article>
+        <h2>Challenge files</h2>
+        <p>
+          The archive contains a single file, <code>generated.py</code>. At the top
+          it defines a stack, sets up a high-precision <code>Decimal</code> context,
+          and exposes four tiny operations:
+        </p>
+        <pre><code>stack = []
+
+def E():
+    a = stack.pop()
+    b = stack.pop()
+    stack.append((Decimal(0.0) if a == OMEGA else CTX.exp(a)) - CTX.ln(b))
+
+def s():
+    stack[-1], stack[-2] = stack[-2], stack[-1]
+
+def one():
+    stack.append(Decimal('1'))
+
+def push_inp():
+    stack.append(Decimal(ord(inp[0]) - 48))</code></pre>
+        <p>
+          The title is mostly bait. Yes, <code>ln</code> is the natural logarithm and
+          <code>exp</code> is its inverse, but in this challenge they are just being used
+          as a weird instruction set to hide a much simpler verifier.
+        </p>
+
+        <h2>First pass</h2>
+        <p>
+          The body of the script is just thousands of repeated calls to
+          <code>one()</code>, <code>s()</code>, <code>neg_inf()</code>, and <code>E()</code>, with
+          a <code>push_inp()</code> every so often. The fast sanity check is to count
+          those <code>push_inp()</code> calls: there are 32 of them, which strongly suggests
+          a 32-character flag.
+        </p>
+        <p>
+          The other useful observation is that the script keeps rebuilding the same
+          constants. In particular, <code>73.21</code> shows up over and over, and the end of
+          the file compares the computed values against four large constants.
+        </p>
+
+        <h2>Reducing the verifier</h2>
+        <p>
+          Instead of trying to symbolically simplify every VM instruction, I traced
+          the stack at the boundaries between the repeated blocks. That makes the
+          shape of the computation obvious: each group of eight input characters is
+          turned into a single decimal value and kept on the stack.
+        </p>
+        <div class="callout">
+          <p>
+            Each 8-character chunk is evaluated as
+            <code>sum((ord(ch) - 48) * 73.21**i for i in 1..8)</code>.
+          </p>
+        </div>
+        <p>
+          So the enormous generated file is equivalent to checking four equations of
+          the form:
+        </p>
+        <pre><code>chunk_value = sum(
+    (ord(ch) - 48) * Decimal("73.21") ** i
+    for i, ch in enumerate(chunk, 1)
+)</code></pre>
+        <p>
+          At the end, the script compares those four chunk values against these targets:
+        </p>
+        <pre><code>46741716782375706.8396419575653316
+46291277424349185.5548286712719316
+42149201139278358.4223548171552311
+64147886106222656.2384332732886897</code></pre>
+
+        <h2>Recovering the flag</h2>
+        <p>
+          Once the problem is in that form, the rest is just base recovery over the
+          expected alphabet. The challenge description already gives the flag format as
+          <code>ping{.*}</code>, which fixes the start and end of the first and last chunks.
+        </p>
+        <p>
+          Searching over the alphabet <code>_0123456789abcdefghijklmnopqrstuvwxyz{}</code>
+          yields exactly one solution per chunk:
+        </p>
+        <pre><code>ping{1_h
+473_m47h
+___17_5c
+4r35_me}</code></pre>
+        <p>
+          Concatenating them gives the final flag.
+        </p>
+
+        <h2>Solver sketch</h2>
+        <pre><code>from decimal import Decimal
+
+BASE = Decimal("73.21")
+targets = [
+    Decimal("46741716782375706.8396419575653316"),
+    Decimal("46291277424349185.5548286712719316"),
+    Decimal("42149201139278358.4223548171552311"),
+    Decimal("64147886106222656.2384332732886897"),
+]
+
+def chunk_value(chunk: str) -&gt; Decimal:
+    return sum((ord(ch) - 48) * (BASE ** i) for i, ch in enumerate(chunk, 1))</code></pre>
+
+        <h2>Flag</h2>
+        <p class="flag">ping{1_h473_m47h___17_5c4r35_me}</p>
+      </article>
+    </main>
+  </body>
+</html>
