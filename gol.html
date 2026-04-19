@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>gol | pingCTF 2026 Writeups</title>
+    <meta
+      name="description"
+      content="Writeup for the pingCTF 2026 rev challenge 'gol', a reversible Game-of-Life-style ELF with two embedded target boards."
+    >
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(74, 222, 128, 0.14), transparent 30%),
+          radial-gradient(circle at top right, rgba(96, 165, 250, 0.14), transparent 28%),
+          linear-gradient(180deg, #08110f 0%, #050a0a 100%);
+        color: #e5e7eb;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 56px 24px 80px;
+      }
+
+      a {
+        color: #86efac;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 24px;
+        text-decoration: none;
+      }
+
+      .hero {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 22px;
+        padding: 28px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+      }
+
+      .eyebrow {
+        color: #86efac;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 6vw, 3.8rem);
+        margin: 12px 0 16px;
+        line-height: 1.05;
+      }
+
+      .meta {
+        color: #94a3b8;
+        font-size: 0.98rem;
+      }
+
+      .lead {
+        font-size: 1.12rem;
+        line-height: 1.7;
+        color: #cbd5e1;
+        max-width: 45rem;
+      }
+
+      article {
+        margin-top: 36px;
+      }
+
+      h2 {
+        margin-top: 32px;
+        margin-bottom: 12px;
+        font-size: 1.6rem;
+      }
+
+      p,
+      li {
+        color: #dbe4f0;
+        line-height: 1.75;
+        font-size: 1.02rem;
+      }
+
+      ul,
+      ol {
+        padding-left: 1.25rem;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: rgba(148, 163, 184, 0.12);
+        border-radius: 6px;
+        padding: 0.15em 0.4em;
+      }
+
+      pre {
+        overflow-x: auto;
+        padding: 18px;
+        border-radius: 16px;
+        background: #020617;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      .callout {
+        border-left: 4px solid #86efac;
+        padding: 16px 18px;
+        background: rgba(20, 83, 45, 0.26);
+        border-radius: 0 14px 14px 0;
+      }
+
+      .flag {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #bef264;
+      }
+
+      .downloads {
+        display: grid;
+        gap: 14px;
+      }
+
+      .download-card {
+        background: rgba(15, 23, 42, 0.62);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .download-card h3 {
+        margin: 0 0 8px;
+        font-size: 1.08rem;
+      }
+
+      .download-card p {
+        margin: 0 0 12px;
+      }
+
+      .download-link {
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back-link" href="index.html">&larr; Back to all writeups</a>
+
+      <header class="hero">
+        <div class="eyebrow">Rev</div>
+        <h1>gol</h1>
+        <p class="meta">376 points • Reversible cellular automaton • Solved during pingCTF 2026</p>
+        <p class="lead">
+          This binary looks like a cursed Game of Life simulator with aggressively unserious
+          symbol names, threads everywhere, and two giant boards embedded in <code>.rodata</code>.
+          The key observation is that the checker is reversible: it evolves a second-order Life-like
+          automaton forward, compares the last two states against the embedded boards, and can therefore
+          be run backward to recover the original packed input bytes directly.
+        </p>
+      </header>
+
+      <article>
+        <h2>Challenge file</h2>
+        <p>
+          The download is a single 64-bit Linux ELF and, unlike many rev tasks, it is not stripped.
+          That does not make the code readable, but it does make the important pieces easier to spot.
+          <code>strings</code> immediately shows three suspicious blobs named <code>GAME</code>,
+          <code>KRILLYOUSELF</code>, and <code>TheOnePieceIsReal</code>, plus a lot of huge function names.
+        </p>
+        <p>
+          <code>main</code> is short: it reads one string with <code>scanf("%s")</code>, passes it to
+          <code>TheStrongDecideTheNatureOfSin</code>, and prints <code>yipee!</code> only if that function returns nonzero.
+          So the whole check lives in that one giant function and the helpers it calls.
+        </p>
+
+        <h2>How the input is packed</h2>
+        <p>
+          The first useful helper is <code>AGoodPartyRequiresABloodSacrifice</code>. It allocates a
+          <code>64 x 48</code> byte board and converts the user input into bitplanes. For the first
+          64 input bytes, bit <code>0</code> goes into row <code>0</code>, bit <code>1</code> into row <code>1</code>,
+          and so on up to row <code>7</code>. The remaining rows start as zero.
+        </p>
+        <p>
+          In other words, column <code>x</code> of the first eight rows stores the byte at position <code>x</code>
+          in little-endian bit order. That matters later because once we reverse the automaton, decoding the
+          original input is just a matter of reassembling those eight rows back into bytes.
+        </p>
+
+        <h2>The worker threads</h2>
+        <p>
+          <code>TheStrongDecideTheNatureOfSin</code> allocates one cell structure for every board position,
+          wires cells together with mailbox objects, and then spawns one thread per cell using
+          <code>thrd_create</code> with <code>BlueHouseGTechExec</code> as the thread entry.
+        </p>
+        <p>
+          Statically the graph builder is ugly, so I took a quick dynamic shortcut: I ran the binary in a Linux
+          container with a tiny <code>LD_PRELOAD</code> shim that logged which cells were connected to which mailboxes.
+          For a center cell, the incoming edges were:
+        </p>
+        <pre><code>(-2,-2) (-2,0) (-2,2)
+( 0,-2)        ( 0,2)
+( 2,-2) ( 2,0) ( 2,2)</code></pre>
+        <p>
+          So this is not normal Life on the immediate Moore neighborhood. Each cell samples the eight cells two steps away.
+        </p>
+
+        <h2>The update rule</h2>
+        <p>
+          Inside <code>BlueHouseGTechExec</code>, each worker gathers those eight neighbor bits, prepends the current cell bit,
+          and uses the resulting 9-bit index to read the <code>GAME</code> lookup table. The binary actually multiplies the index by two,
+          so only every other byte of <code>GAME</code> is meaningful.
+        </p>
+        <p>
+          If you tabulate the live outputs, the rule collapses to standard Conway Life semantics:
+        </p>
+        <ul>
+          <li>dead cell with exactly 3 live neighbors becomes alive</li>
+          <li>live cell survives with 2 or 3 live neighbors</li>
+        </ul>
+        <p>
+          The twist is that the binary is second-order. The next state is the Life result xor the previous state:
+        </p>
+        <pre><code>board[t + 1] = life(board[t]) ^ board[t - 1]</code></pre>
+        <div class="callout">
+          <p>
+            That recurrence is reversible. If you know two consecutive boards, you can recover the older one with
+            <code>board[t - 1] = life(board[t]) ^ board[t + 1]</code>.
+          </p>
+        </div>
+
+        <h2>The target boards are embedded in the binary</h2>
+        <p>
+          During initialization, each cell stores two target bits taken from the large ASCII-art blobs
+          <code>KRILLYOUSELF</code> and <code>TheOnePieceIsReal</code>. The worker compares its final two states against those targets before returning.
+        </p>
+        <p>
+          The end condition is therefore:
+        </p>
+        <pre><code>board[0x5379] == KRILLYOUSELF
+board[0x537A] == TheOnePieceIsReal</code></pre>
+        <p>
+          Once that clicked, the solve stopped being a simulation problem and became a reversal problem. We already know the last two boards,
+          because the binary ships them in plaintext as <code>#</code>/<code>space</code> art.
+        </p>
+
+        <h2>Running the automaton backward</h2>
+        <p>
+          I parsed both ASCII-art boards into <code>64 x 48</code> bitmaps and repeatedly applied the reverse step:
+        </p>
+        <pre><code>older = life(previous) ^ current
+current, previous = previous, older</code></pre>
+        <p>
+          Repeating that <code>0x537A - 1</code> times lands on the initial board built from the flag. At that point, the picture is exactly what
+          <code>AGoodPartyRequiresABloodSacrifice</code> would have produced from the user input: the first eight rows contain packed bytes and everything below is zero.
+        </p>
+
+        <h2>Decoding the flag</h2>
+        <p>
+          Reassembling the first eight rows column by column gives the original input bytes directly. The recovered byte string starts with a valid flag and then zero padding:
+        </p>
+        <pre><code>ping_500hoursofmindglorbingaction\x00\x00\x00...</code></pre>
+        <p class="flag">Flag: <code>ping_500hoursofmindglorbingaction</code></p>
+
+        <h2>Minimal solver</h2>
+        <p>
+          The final solver only needs the binary itself. It extracts the rule table and the two ASCII-art boards from <code>.rodata</code>, runs the reverse recurrence,
+          and decodes the packed bytes from the reconstructed initial state.
+        </p>
+        <pre><code>rule = GAME[::2]
+previous = KRILLYOUSELF
+current = TheOnePieceIsReal
+
+for _ in range(0x537A - 1):
+    older = life(previous) ^ current
+    current, previous = previous, older
+
+flag = unpack_first_8_rows(previous)</code></pre>
+
+        <h2>Downloads</h2>
+        <div class="downloads">
+          <section class="download-card">
+            <h3><code>solve.py</code></h3>
+            <p>
+              Standalone solver that extracts the lookup table and both target boards from the provided ELF,
+              reverses the second-order automaton, and reconstructs the original input bytes.
+            </p>
+            <a class="download-link" href="artifacts/gol-376/solve.py" download>
+              Download solver
+            </a>
+          </section>
+        </div>
+      </article>
+    </main>
+  </body>
+</html>
