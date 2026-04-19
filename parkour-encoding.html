@@ -127,6 +127,18 @@
         font-weight: 700;
         color: #bef264;
       }
+
+      .downloads {
+        margin-top: 28px;
+        padding: 22px;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .downloads h2 {
+        margin-top: 0;
+      }
     </style>
   </head>
   <body>
@@ -221,6 +233,28 @@ flag = "".join(
 )
 
 print(flag)</code></pre>
+
+        <section class="downloads">
+          <h2>Downloads</h2>
+          <p>
+            The full solver and the extracted supporting artifacts are published with
+            the writeup and can be downloaded directly:
+          </p>
+          <ul>
+            <li>
+              <a href="artifacts/parkour-encoding/solve.py" download>solve.py</a>
+              - Self-contained Python solver that reads the world save and decodes the route.
+            </li>
+            <li>
+              <a href="artifacts/parkour-encoding/bitstream.txt" download>bitstream.txt</a>
+              - The recovered 432-bit route, grouped into bytes and decoded to ASCII.
+            </li>
+            <li>
+              <a href="artifacts/parkour-encoding/sign.txt" download>sign.txt</a>
+              - The end-of-course sign text and its block coordinates.
+            </li>
+          </ul>
+        </section>
 
         <h2>Flag</h2>
         <p class="flag">ping{fl4g_1s_Wh4t3V3R_Y0u_w4nT_1_h0p3_y0u_d0nt_us3_41}</p>
