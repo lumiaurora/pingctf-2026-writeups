@@ -2,22 +2,13 @@
 
 Writeups by Lumi Aurora for solved `pingCTF 2026` challenges.
 
-This repository and the matching GitHub Pages site collect my `pingCTF 2026 writeups`, artifacts, and solver scripts in a blog-style format so the challenge writeups are easy to read and easy to find.
+This repository backs my personal `pingCTF 2026` writeup blog. It has the writeups themselves along with the artifacts, notes, and solver scripts that go with them.
 
 Links:
 - GitHub Pages: <https://lumiaurora.github.io/pingctf-2026-writeups/>
 - Repository: <https://github.com/lumiaurora/pingctf-2026-writeups>
 
-If you are searching for:
-- `pingCTF 2026 writeup`
-- `ping CTF 2026 writeups`
-- `gol pingCTF 2026 writeup`
-- `cf madness pingCTF 2026 writeup`
-- `tuttis pingCTF 2026 writeup`
-- `Parkour encoding pingCTF 2026 writeup`
-- `What the fuck is a logarithm pingCTF 2026 writeup`
-
-this is the archive.
+The GitHub Pages site is where I’m publishing the writeups in a cleaner blog-style format.
 
 ## Published Writeups
 
