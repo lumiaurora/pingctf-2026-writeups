@@ -127,6 +127,22 @@
         font-weight: 700;
         color: #bef264;
       }
+
+      .download-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .download-card {
+        background: rgba(15, 23, 42, 0.52);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        padding: 16px 18px;
+      }
+
+      .download-card p {
+        margin: 8px 0 0;
+      }
     </style>
   </head>
   <body>
@@ -269,6 +285,25 @@ post_raw(crafted_packet_with_shellcode)
 trigger_decode()
 
 # shellcode prints bytes from 0x80003e00</code></pre>
+
+        <h2>Downloads</h2>
+        <p>
+          The exact exploit files used for this solve are available here:
+        </p>
+        <div class="download-list">
+          <div class="download-card">
+            <a href="artifacts/tuttis/solve.py" download>Download <code>solve.py</code></a>
+            <p>Full remote solver that assembles the shellcode, crafts the packet, and extracts the flag.</p>
+          </div>
+          <div class="download-card">
+            <a href="artifacts/tuttis/shellcode.S" download>Download <code>shellcode.S</code></a>
+            <p>Minimal RISC-V UART shellcode that prints the bytes in the <code>.flag</code> ELF section.</p>
+          </div>
+          <div class="download-card">
+            <a href="artifacts/tuttis/README.md" download>Download <code>README.md</code></a>
+            <p>Short notes on what is included in the artifact bundle and what toolchain the solver expects.</p>
+          </div>
+        </div>
 
         <h2>Flag</h2>
         <p class="flag">ping{1_w1ll_m154l1gn_y0ur_b0n35_190985765989}</p>
