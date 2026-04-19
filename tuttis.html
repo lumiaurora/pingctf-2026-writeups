@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>tuttis | pingCTF 2026 Writeups</title>
+    <meta
+      name="description"
+      content="Writeup for the pingCTF 2026 pwn challenge 'tuttis', a RISC-V telemetry station running under Spike."
+    >
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(251, 146, 60, 0.18), transparent 30%),
+          radial-gradient(circle at top right, rgba(217, 70, 239, 0.14), transparent 28%),
+          linear-gradient(180deg, #120b12 0%, #07070b 100%);
+        color: #e5e7eb;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 56px 24px 80px;
+      }
+
+      a {
+        color: #7dd3fc;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 24px;
+        text-decoration: none;
+      }
+
+      .hero {
+        background: rgba(23, 23, 35, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 22px;
+        padding: 28px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      .eyebrow {
+        color: #fdba74;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 6vw, 3.8rem);
+        margin: 12px 0 16px;
+        line-height: 1.05;
+      }
+
+      .meta {
+        color: #94a3b8;
+        font-size: 0.98rem;
+      }
+
+      .lead {
+        font-size: 1.12rem;
+        line-height: 1.7;
+        color: #cbd5e1;
+        max-width: 44rem;
+      }
+
+      article {
+        margin-top: 36px;
+      }
+
+      h2 {
+        margin-top: 32px;
+        margin-bottom: 12px;
+        font-size: 1.6rem;
+      }
+
+      p,
+      li {
+        color: #dbe4f0;
+        line-height: 1.75;
+        font-size: 1.02rem;
+      }
+
+      ul,
+      ol {
+        padding-left: 1.25rem;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: rgba(148, 163, 184, 0.12);
+        border-radius: 6px;
+        padding: 0.15em 0.4em;
+      }
+
+      pre {
+        overflow-x: auto;
+        padding: 18px;
+        border-radius: 16px;
+        background: #020617;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      pre code {
+        background: transparent;
+        padding: 0;
+      }
+
+      .callout {
+        border-left: 4px solid #fb923c;
+        padding: 16px 18px;
+        background: rgba(124, 45, 18, 0.28);
+        border-radius: 0 14px 14px 0;
+      }
+
+      .flag {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #bef264;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back-link" href="index.html">&larr; Back to all writeups</a>
+
+      <header class="hero">
+        <div class="eyebrow">Pwn</div>
+        <h1>tuttis</h1>
+        <p class="meta">409 points • RISC-V memory corruption • Solved during pingCTF 2026</p>
+        <p class="lead">
+          This challenge ships a 32-bit RISC-V telemetry station binary that runs under
+          Spike. The real flag is injected into a dedicated ELF section before launch,
+          and the bug chain is a neat mix of a one-byte underflow, reversed packet-slot
+          indexing, and a deliberate misaligned load that can be turned into code execution.
+        </p>
+      </header>
+
+      <article>
+        <h2>Challenge setup</h2>
+        <p>
+          The archive contains a statically linked RISC-V ELF called <code>tutti</code>,
+          a local <code>spike</code> binary, and a Docker setup that patches the real flag
+          into the executable right before the service starts:
+        </p>
+        <pre><code>COPY tutti flag.txt .
+RUN ./tools/objcopy_rv --update-section .flag=flag.txt tutti</code></pre>
+        <p>
+          So the flag is not read from the filesystem at runtime. It lives in the
+          program image itself, in section <code>.flag</code> at virtual address
+          <code>0x80003e00</code>. That immediately tells us the end goal: get the program
+          counter under control and print bytes from that address.
+        </p>
+
+        <h2>First reverse pass</h2>
+        <p>
+          The binary still has symbols, which makes the interesting parts easy to spot:
+          <code>main</code>, <code>encode_packet</code>, <code>decode_packet</code>,
+          <code>session_token_decode</code>, and a trap handler at <code>0x80000000</code>.
+        </p>
+        <p>
+          The menu works with eight packet slots. The important detail is that the slots
+          are indexed backwards:
+        </p>
+        <pre><code>slot_ptr = SLOTS + ((7 - current_slot) &lt;&lt; 10)</code></pre>
+        <p>
+          That means slot <code>7</code> is the very first slot in memory, starting at
+          <code>0x80000160</code>. The trap handler ends at <code>0x8000015f</code>, so slot 7
+          begins immediately after it.
+        </p>
+
+        <h2>The bug</h2>
+        <p>
+          The packet encoder asks for a recipient and validates it with
+          <code>decode_sender()</code>. On failure it does this:
+        </p>
+        <pre><code>puts("Invalid recipient");
+memset(slot - 1, '*', 0x401);
+return;</code></pre>
+        <p>
+          That is a one-byte underflow followed by a full-slot overwrite. For most slots
+          it is just a nearby clobber, but for slot <code>7</code> the write starts at
+          <code>0x8000015f</code>, which is the final byte of the trap handler.
+        </p>
+        <div class="callout">
+          <p>
+            The exploit plan is to select slot <code>7</code>, trigger the invalid-recipient
+            path once to corrupt the trap handler, refill slot 7 with attacker-controlled
+            bytes, and then force a trap so execution enters the slot buffer.
+          </p>
+        </div>
+
+        <h2>Why a trap is easy to trigger</h2>
+        <p>
+          <code>decode_packet()</code> contains a convenient bug on the normal parsing path.
+          With a crafted version-3 packet and a valid sender, it can reach this load:
+        </p>
+        <pre><code>lw a1, 0x1a(slot)</code></pre>
+        <p>
+          The offset <code>0x1a</code> is not 4-byte aligned, so on RISC-V that raises a
+          misaligned-load exception. The trap handler prints register state and then, after
+          our one-byte corruption, falls through into slot 7, which now contains shellcode.
+        </p>
+
+        <h2>Crafting the malicious packet</h2>
+        <p>
+          The slot payload needs to pass enough validation to reach the misaligned load.
+          The fields I used were:
+        </p>
+        <ul>
+          <li><code>0x88ff</code> as the version field so the binary recognizes it as version 3.</li>
+          <li><code>0x0789</code> as the sender, which decodes to <code>TUTTI</code>.</li>
+          <li><code>0x11d</code> as the session token so <code>session_token_decode()</code> returns success.</li>
+          <li><code>0xffff</code> in the timestamp field so the parser takes the branch that performs the unaligned <code>lw 0x1a(slot)</code>.</li>
+        </ul>
+        <p>
+          After the 0x20-byte packet header, I placed a tiny RISC-V stub that writes the
+          bytes at <code>0x80003e00</code> to the UART until it hits the terminating zero byte.
+        </p>
+
+        <h2>Shellcode</h2>
+        <p>
+          The shellcode does not need to be fancy. It just points one register at the UART
+          MMIO base <code>0x10000000</code> and another at the flag section:
+        </p>
+        <pre><code>lui a3, 0x10000
+addi a4, a3, 5
+lui a1, 0x80004
+addi a1, a1, -0x200   # 0x80003e00
+
+loop:
+  lbu a0, 0(a1)
+  beqz a0, done
+
+wait_tx:
+  lbu a5, 0(a4)
+  andi a5, a5, 0x20
+  beqz a5, wait_tx
+  sb a0, 0(a3)
+  addi a1, a1, 1
+  j loop</code></pre>
+        <p>
+          Because the flag is stored directly in the ELF image, printing from
+          <code>0x80003e00</code> is enough to recover it.
+        </p>
+
+        <h2>Exploit flow</h2>
+        <ol>
+          <li>Select packet slot <code>7</code>.</li>
+          <li>Choose <code>Encode packet</code> and send an invalid recipient to trigger the <code>memset(slot - 1, '*', 0x401)</code> underflow.</li>
+          <li>Post the crafted raw packet into slot 7 so the slot body now holds the shellcode.</li>
+          <li>Choose <code>Extract telemetry data</code> to parse that slot and hit the misaligned <code>lw 0x1a(slot)</code>.</li>
+          <li>Let the corrupted trap handler transfer control into slot 7 and print the flag.</li>
+        </ol>
+
+        <h2>Solver sketch</h2>
+        <pre><code>set_slot(7)
+patch_trap_handler_with_invalid_recipient()
+post_raw(crafted_packet_with_shellcode)
+trigger_decode()
+
+# shellcode prints bytes from 0x80003e00</code></pre>
+
+        <h2>Flag</h2>
+        <p class="flag">ping{1_w1ll_m154l1gn_y0ur_b0n35_190985765989}</p>
+      </article>
+    </main>
+  </body>
+</html>
