@@ -127,6 +127,32 @@
         font-weight: 700;
         color: #bef264;
       }
+
+      .downloads {
+        display: grid;
+        gap: 14px;
+      }
+
+      .download-card {
+        background: rgba(15, 23, 42, 0.62);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .download-card h3 {
+        margin: 0 0 8px;
+        font-size: 1.08rem;
+      }
+
+      .download-card p {
+        margin: 0 0 12px;
+      }
+
+      .download-link {
+        font-weight: 700;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
@@ -247,6 +273,44 @@ targets = [
 
 def chunk_value(chunk: str) -&gt; Decimal:
     return sum((ord(ch) - 48) * (BASE ** i) for i, ch in enumerate(chunk, 1))</code></pre>
+
+        <h2>Downloads</h2>
+        <p>
+          I uploaded the helper files used for the writeup so the whole solve is
+          reproducible from the blog post itself.
+        </p>
+        <div class="downloads">
+          <section class="download-card">
+            <h3><code>solve.py</code></h3>
+            <p>
+              The backtracking solver used to recover the four 8-character chunks
+              from the target constants.
+            </p>
+            <a class="download-link" href="artifacts/what-the-fuck-is-a-logarithm/solve.py" download>
+              Download solver
+            </a>
+          </section>
+          <section class="download-card">
+            <h3><code>deobfuscated-checker.py</code></h3>
+            <p>
+              A clean equivalent checker that verifies a candidate flag without the
+              generated <code>exp</code>/<code>ln</code> stack-machine noise.
+            </p>
+            <a class="download-link" href="artifacts/what-the-fuck-is-a-logarithm/deobfuscated-checker.py" download>
+              Download clean checker
+            </a>
+          </section>
+          <section class="download-card">
+            <h3><code>notes.md</code></h3>
+            <p>
+              Short notes with the alphabet, base, targets, chunk breakdown, and
+              final recovered flag.
+            </p>
+            <a class="download-link" href="artifacts/what-the-fuck-is-a-logarithm/notes.md" download>
+              Download notes
+            </a>
+          </section>
+        </div>
 
         <h2>Flag</h2>
         <p class="flag">ping{1_h473_m47h___17_5c4r35_me}</p>
