@@ -114,6 +114,24 @@
       <section class="posts" aria-label="Writeup posts">
         <article class="post-card">
           <div class="meta">Published Apr 19, 2026</div>
+          <h2>cf madness</h2>
+          <p>
+            A stripped rev ELF that routes each ASCII byte through one of 128 tiny helpers
+            and compares the generated output against an interleaved constant table. This
+            writeup shows how the even entries leak the flag length and the odd entries
+            decode into the flag directly.
+          </p>
+          <div class="tag-row" aria-label="Post tags">
+            <span class="tag">rev</span>
+            <span class="tag">elf</span>
+            <span class="tag">radare2</span>
+            <span class="tag">static-analysis</span>
+          </div>
+          <a class="cta" href="cf-madness.html">Read writeup</a>
+        </article>
+
+        <article class="post-card">
+          <div class="meta">Published Apr 19, 2026</div>
           <h2>tuttis</h2>
           <p>
             A RISC-V pwn challenge running under Spike where the real flag is patched into
