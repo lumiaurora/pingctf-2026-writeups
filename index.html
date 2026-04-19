@@ -3,29 +3,107 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>pingCTF 2026 Writeups</title>
+    <title>pingCTF 2026 Writeups by Lumi Aurora | Rev, Pwn, Misc Challenge Writeups</title>
+    <meta
+      name="description"
+      content="pingCTF 2026 writeups by Lumi Aurora covering rev, pwn, and misc challenges including gol, cf madness, tuttis, Parkour encoding, and What the fuck is a logarithm."
+    >
+    <meta
+      name="keywords"
+      content="pingCTF 2026 writeups, ping CTF 2026 writeup, pingCTF writeup, gol pingCTF 2026 writeup, cf madness pingCTF 2026 writeup, tuttis pingCTF 2026 writeup, Parkour encoding pingCTF 2026 writeup, What the fuck is a logarithm pingCTF 2026 writeup, CTF reversing writeups, CTF pwn writeups, Lumi Aurora"
+    >
+    <meta name="author" content="Lumi Aurora">
+    <link rel="canonical" href="https://lumiaurora.github.io/pingctf-2026-writeups/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="pingCTF 2026 Writeups by Lumi Aurora">
+    <meta
+      property="og:description"
+      content="Writeups and artifacts for solved pingCTF 2026 challenges, published as readable blog-style posts on GitHub Pages."
+    >
+    <meta property="og:url" content="https://lumiaurora.github.io/pingctf-2026-writeups/">
+    <meta property="og:site_name" content="pingCTF 2026 Writeups">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="pingCTF 2026 Writeups by Lumi Aurora">
+    <meta
+      name="twitter:description"
+      content="Rev, pwn, and misc writeups from pingCTF 2026 with artifacts and solver scripts."
+    >
     <style>
       :root {
         color-scheme: dark;
+        --bg-top: #34163a;
+        --bg-mid: #241028;
+        --bg-bottom: #120817;
+        --text: #fff3fb;
+        --muted: #f2d4e7;
+        --soft: #d9b8d0;
+        --line: rgba(255, 214, 240, 0.28);
+        --card: rgba(61, 28, 60, 0.72);
+        --card-strong: rgba(76, 37, 74, 0.84);
+        --accent: #ff94d1;
+        --accent-2: #ffd8f2;
+        --accent-3: #bee8ff;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        min-height: 100vh;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
         background:
-          radial-gradient(circle at top, rgba(34, 211, 238, 0.14), transparent 30%),
-          linear-gradient(180deg, #0b1020 0%, #070b16 100%);
-        color: #e5e7eb;
+          radial-gradient(circle at 12% 12%, rgba(255, 194, 228, 0.32), transparent 14%),
+          radial-gradient(circle at 84% 10%, rgba(189, 234, 255, 0.22), transparent 16%),
+          radial-gradient(circle at 18% 19%, rgba(255, 255, 255, 0.18), transparent 7%),
+          radial-gradient(circle at 24% 19%, rgba(255, 255, 255, 0.18), transparent 7%),
+          radial-gradient(circle at 21% 15%, rgba(255, 255, 255, 0.22), transparent 10%),
+          radial-gradient(circle at 74% 22%, rgba(255, 255, 255, 0.16), transparent 7%),
+          radial-gradient(circle at 80% 22%, rgba(255, 255, 255, 0.16), transparent 7%),
+          radial-gradient(circle at 77% 18%, rgba(255, 255, 255, 0.2), transparent 10%),
+          linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 38%, var(--bg-bottom) 100%);
+        color: var(--text);
       }
 
       main {
-        max-width: 860px;
+        max-width: 1020px;
         margin: 0 auto;
-        padding: 64px 24px;
+        padding: 64px 24px 88px;
+      }
+
+      a {
+        color: var(--accent-2);
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 36px 32px;
+        border-radius: 30px;
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(180deg, rgba(92, 46, 92, 0.88), rgba(44, 21, 47, 0.92)),
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 30%);
+        box-shadow: 0 28px 90px rgba(17, 6, 18, 0.35);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -28px;
+        bottom: -24px;
+        width: 250px;
+        height: 132px;
+        background:
+          radial-gradient(circle at 32% 60%, rgba(255, 255, 255, 0.16), transparent 19%),
+          radial-gradient(circle at 58% 56%, rgba(255, 255, 255, 0.16), transparent 21%),
+          radial-gradient(circle at 44% 40%, rgba(255, 255, 255, 0.2), transparent 24%);
+        pointer-events: none;
       }
 
       .eyebrow {
-        color: #67e8f9;
+        color: var(--accent-2);
         font-size: 0.95rem;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -33,82 +111,182 @@
       }
 
       h1 {
-        font-size: clamp(2rem, 6vw, 4rem);
         margin: 12px 0 16px;
+        font-size: clamp(2.4rem, 6vw, 4.5rem);
+        line-height: 0.98;
+      }
+
+      h2 {
+        margin: 0;
       }
 
       p {
-        font-size: 1.1rem;
-        line-height: 1.7;
-        color: #cbd5e1;
+        font-size: 1.08rem;
+        line-height: 1.75;
+        color: var(--muted);
       }
 
-      a {
-        color: #7dd3fc;
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        padding: 0.15em 0.4em;
+        border-radius: 6px;
+        background: rgba(255, 214, 240, 0.1);
       }
 
       .lede {
-        max-width: 42rem;
+        max-width: 48rem;
+      }
+
+      .top-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .button-link {
+        display: inline-block;
+        padding: 11px 18px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 214, 242, 0.08);
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .button-link.primary {
+        background: linear-gradient(180deg, #ffb1de, #ff8fce);
+        color: #441733;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .summary-card {
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(255, 233, 245, 0.08);
+        padding: 18px;
+      }
+
+      .summary-card strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--accent-2);
+      }
+
+      .section-heading {
+        margin-top: 40px;
+        font-size: clamp(1.6rem, 4vw, 2.2rem);
+      }
+
+      .section-copy {
+        margin-top: 12px;
       }
 
       .posts {
         display: grid;
         gap: 20px;
-        margin-top: 40px;
+        margin-top: 24px;
       }
 
       .post-card {
-        background: rgba(15, 23, 42, 0.82);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        border-radius: 18px;
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, var(--card-strong), var(--card));
         padding: 24px;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 20px 60px rgba(11, 2, 14, 0.28);
       }
 
       .post-card h2 {
-        margin: 10px 0 12px;
-        font-size: 1.6rem;
+        margin-top: 10px;
+        margin-bottom: 12px;
+        font-size: 1.7rem;
       }
 
       .meta {
-        color: #94a3b8;
+        color: var(--soft);
         font-size: 0.95rem;
       }
 
       .tag-row {
         display: flex;
-        gap: 10px;
         flex-wrap: wrap;
+        gap: 10px;
         margin-top: 16px;
       }
 
       .tag {
-        border: 1px solid rgba(125, 211, 252, 0.3);
-        border-radius: 999px;
         padding: 6px 12px;
-        color: #bae6fd;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 214, 240, 0.32);
+        background: rgba(189, 234, 255, 0.08);
+        color: var(--accent-3);
         font-size: 0.9rem;
       }
 
       .cta {
         display: inline-block;
         margin-top: 18px;
+        color: var(--accent);
         text-decoration: none;
         font-weight: 700;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .hero {
+          padding: 28px 22px;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <div class="eyebrow">GitHub Pages</div>
-      <h1>pingCTF 2026 Writeups</h1>
-      <p class="lede">
-        This site will host my writeups for the challenges I solved during
-        pingCTF 2026.
-      </p>
-      <p>
-        The source for the writeups lives in the
-        <a href="https://github.com/lumiaurora/pingctf-2026-writeups">GitHub repository</a>.
+      <section class="hero">
+        <div class="eyebrow">Pink cloud archive</div>
+        <h1>pingCTF 2026 Writeups</h1>
+        <p class="lede">
+          Blog-style writeups by Lumi Aurora for the pingCTF 2026 challenges I solved,
+          with notes, solver scripts, and downloadable artifacts for each challenge.
+        </p>
+        <p>
+          If you searched for <code>pingCTF 2026 writeups</code>, <code>gol pingCTF 2026 writeup</code>,
+          <code>cf madness pingCTF 2026 writeup</code>, <code>tuttis pingCTF 2026 writeup</code>, or other
+          ping CTF challenge writeups, this is the archive.
+        </p>
+        <div class="top-links">
+          <a class="button-link primary" href="https://lumiaurora.github.io/pingctf-2026-writeups/">GitHub Pages URL</a>
+          <a class="button-link" href="https://github.com/lumiaurora/pingctf-2026-writeups">Repository</a>
+        </div>
+        <div class="summary-grid" aria-label="Site summary">
+          <div class="summary-card">
+            <strong>Challenges</strong>
+            <span>5 published writeups</span>
+          </div>
+          <div class="summary-card">
+            <strong>Categories</strong>
+            <span>rev, pwn, misc</span>
+          </div>
+          <div class="summary-card">
+            <strong>Extras</strong>
+            <span>Artifacts, notes, and solver scripts</span>
+          </div>
+        </div>
+      </section>
+
+      <h2 class="section-heading">Challenge Writeups</h2>
+      <p class="section-copy">
+        Each page is a standalone pingCTF 2026 challenge writeup with challenge names,
+        categories, and descriptions written clearly for search indexing.
       </p>
 
       <section class="posts" aria-label="Writeup posts">
@@ -116,14 +294,15 @@
           <div class="meta">Published Apr 19, 2026</div>
           <h2>gol</h2>
           <p>
-            A rev ELF built around a reversible Game-of-Life-style automaton. This writeup shows how the
-            checker only validates the last two board states, how the real neighborhood is two cells away,
-            and how reversing the recurrence recovers the packed input bytes directly.
+            A pingCTF 2026 rev writeup for <strong>gol</strong>, a reversible Game-of-Life-style ELF.
+            It explains how the checker validates the last two board states and how reversing the
+            recurrence recovers the packed input bytes directly.
           </p>
           <div class="tag-row" aria-label="Post tags">
             <span class="tag">rev</span>
             <span class="tag">cellular-automata</span>
             <span class="tag">elf</span>
+            <span class="tag">pingCTF 2026</span>
             <span class="tag">reversing</span>
           </div>
           <a class="cta" href="gol.html">Read writeup</a>
@@ -133,15 +312,14 @@
           <div class="meta">Published Apr 19, 2026</div>
           <h2>cf madness</h2>
           <p>
-            A stripped rev ELF that routes each ASCII byte through one of 128 tiny helpers
-            and compares the generated output against an interleaved constant table. This
-            writeup shows how the even entries leak the flag length and the odd entries
-            decode into the flag directly.
+            A pingCTF 2026 reversing writeup for <strong>cf madness</strong>, a stripped ELF that routes
+            each ASCII byte through tiny helpers and compares the result against an interleaved constant table.
           </p>
           <div class="tag-row" aria-label="Post tags">
             <span class="tag">rev</span>
             <span class="tag">elf</span>
             <span class="tag">radare2</span>
+            <span class="tag">pingCTF 2026</span>
             <span class="tag">static-analysis</span>
           </div>
           <a class="cta" href="cf-madness.html">Read writeup</a>
@@ -151,14 +329,14 @@
           <div class="meta">Published Apr 19, 2026</div>
           <h2>tuttis</h2>
           <p>
-            A RISC-V pwn challenge running under Spike where the real flag is patched into
-            an ELF section. This writeup shows how a one-byte underflow into the trap handler,
-            a reversed slot layout, and a forced misaligned load combine into shellcode execution.
+            A pingCTF 2026 pwn writeup for <strong>tuttis</strong>, a RISC-V challenge running under Spike,
+            showing how a one-byte underflow and forced misaligned load lead into shellcode execution.
           </p>
           <div class="tag-row" aria-label="Post tags">
             <span class="tag">pwn</span>
             <span class="tag">riscv</span>
             <span class="tag">emulator</span>
+            <span class="tag">pingCTF 2026</span>
             <span class="tag">shellcode</span>
           </div>
           <a class="cta" href="tuttis.html">Read writeup</a>
@@ -168,14 +346,14 @@
           <div class="meta">Published Apr 19, 2026</div>
           <h2>Parkour encoding</h2>
           <p>
-            A Minecraft world save where the parkour course itself is the message.
-            This writeup shows how the only sign in the map points to the route, and
-            how the diamond blocks on <code>y = 0</code> decode into the flag as raw ASCII.
+            A pingCTF 2026 misc writeup for <strong>Parkour encoding</strong>, a Minecraft world save where
+            the parkour route itself encodes the flag as raw ASCII.
           </p>
           <div class="tag-row" aria-label="Post tags">
             <span class="tag">misc</span>
             <span class="tag">minecraft</span>
             <span class="tag">encoding</span>
+            <span class="tag">pingCTF 2026</span>
             <span class="tag">forensics</span>
           </div>
           <a class="cta" href="parkour-encoding.html">Read writeup</a>
@@ -185,15 +363,14 @@
           <div class="meta">Published Apr 19, 2026</div>
           <h2>What the fuck is a logarithm</h2>
           <p>
-            A rev challenge built around a generated Python stack machine full of
-            <code>exp</code> and <code>ln</code> noise. The writeup shows how the
-            verifier collapses into four weighted sums in base <code>73.21</code>
-            and how that gives the flag directly.
+            A pingCTF 2026 rev writeup for <strong>What the fuck is a logarithm</strong>, a generated Python
+            stack machine where the verifier collapses into weighted sums in base <code>73.21</code>.
           </p>
           <div class="tag-row" aria-label="Post tags">
             <span class="tag">rev</span>
             <span class="tag">python</span>
             <span class="tag">decimal</span>
+            <span class="tag">pingCTF 2026</span>
             <span class="tag">deobfuscation</span>
           </div>
           <a class="cta" href="what-the-fuck-is-a-logarithm.html">Read writeup</a>
